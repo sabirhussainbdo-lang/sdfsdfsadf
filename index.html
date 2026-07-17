@@ -1,0 +1,267 @@
+/* =========================================================
+   BENCHMARK SETUPS — PC BUILDER
+   All figures below (TDP, price, "score") are original,
+   hand-set estimates for planning purposes only — not
+   scraped or reproduced from any third-party benchmark
+   database or proprietary scoring system.
+   ========================================================= */
+
+const DATA = {
+  cpu: [
+    { id:"r5-7600",   name:"Ryzen 5 7600",        socket:"AM5",  tdp:65,  price:200, score:66 },
+    { id:"r7-7800x3d",name:"Ryzen 7 7800X3D",     socket:"AM5",  tdp:120, price:360, score:92 },
+    { id:"r9-9950x",  name:"Ryzen 9 9950X",       socket:"AM5",  tdp:170, price:560, score:97 },
+    { id:"i5-13400f", name:"Core i5-13400F",      socket:"LGA1700", tdp:65,  price:190, score:64 },
+    { id:"i5-14600k", name:"Core i5-14600K",      socket:"LGA1700", tdp:125, price:300, score:83 },
+    { id:"i7-14700k", name:"Core i7-14700K",      socket:"LGA1700", tdp:125, price:400, score:90 },
+  ],
+  mobo: [
+    { id:"b650-itx",  name:"B650 Mini-ITX",   socket:"AM5",     ramType:"DDR5", formFactor:"ITX",  price:220 },
+    { id:"b650-matx", name:"B650 Micro-ATX",  socket:"AM5",     ramType:"DDR5", formFactor:"mATX", price:150 },
+    { id:"x670-atx",  name:"X670E ATX",       socket:"AM5",     ramType:"DDR5", formFactor:"ATX",  price:340 },
+    { id:"b760-itx",  name:"B760 Mini-ITX",   socket:"LGA1700", ramType:"DDR5", formFactor:"ITX",  price:210 },
+    { id:"b760-matx", name:"B760 Micro-ATX",  socket:"LGA1700", ramType:"DDR4", formFactor:"mATX", price:130 },
+    { id:"z790-atx",  name:"Z790 ATX",        socket:"LGA1700", ramType:"DDR5", formFactor:"ATX",  price:330 },
+  ],
+  gpu: [
+    { id:"rtx4060",     name:"GeForce RTX 4060",       tdp:115, price:300,  score:58, length:200 },
+    { id:"rtx4060ti",   name:"GeForce RTX 4060 Ti",    tdp:160, price:420,  score:66, length:245 },
+    { id:"rtx4070super",name:"GeForce RTX 4070 Super",  tdp:220, price:600,  score:80, length:267 },
+    { id:"rtx4080super",name:"GeForce RTX 4080 Super",  tdp:320, price:1000, score:92, length:310 },
+    { id:"rx7600",      name:"Radeon RX 7600",          tdp:165, price:270,  score:54, length:210 },
+    { id:"rx7800xt",    name:"Radeon RX 7800 XT",       tdp:263, price:500,  score:78, length:270 },
+  ],
+  ram: [
+    { id:"ddr5-16",  name:"16GB DDR5-6000",  ramType:"DDR5", price:60 },
+    { id:"ddr5-32",  name:"32GB DDR5-6000",  ramType:"DDR5", price:110 },
+    { id:"ddr4-16",  name:"16GB DDR4-3600",  ramType:"DDR4", price:45 },
+    { id:"ddr4-32",  name:"32GB DDR4-3600",  ramType:"DDR4", price:85 },
+  ],
+  storage: [
+    { id:"nvme-500",  name:"500GB NVMe SSD",  price:40 },
+    { id:"nvme-1tb",  name:"1TB NVMe SSD",    price:65 },
+    { id:"nvme-2tb",  name:"2TB NVMe SSD",    price:120 },
+  ],
+  case: [
+    { id:"itx-case",  name:"Compact ITX case",   formFactorSupport:["ITX"],              maxGpuLength:280, price:90 },
+    { id:"matx-case", name:"Micro-ATX tower",    formFactorSupport:["ITX","mATX"],       maxGpuLength:330, price:80 },
+    { id:"atx-case",  name:"Full ATX tower",     formFactorSupport:["ITX","mATX","ATX"], maxGpuLength:400, price:100 },
+  ],
+  cooler: [
+    { id:"air-tower",  name:"Air tower cooler",   maxTdp:150, price:40 },
+    { id:"aio-240",    name:"240mm AIO liquid",   maxTdp:220, price:90 },
+    { id:"aio-360",    name:"360mm AIO liquid",   maxTdp:280, price:130 },
+  ],
+  psu: [
+    { id:"psu-550",  name:"550W 80+ Bronze",  watts:550, price:60 },
+    { id:"psu-650",  name:"650W 80+ Gold",    watts:650, price:80 },
+    { id:"psu-750",  name:"750W 80+ Gold",    watts:750, price:100 },
+    { id:"psu-850",  name:"850W 80+ Gold",    watts:850, price:130 },
+  ],
+};
+
+const SLOT_ORDER = [
+  { key:"cpu",     label:"Processor",       desig:"U1" },
+  { key:"mobo",    label:"Motherboard",     desig:"U2" },
+  { key:"gpu",     label:"Graphics card",   desig:"U3" },
+  { key:"ram",     label:"Memory",          desig:"U4" },
+  { key:"storage", label:"Storage",         desig:"U5" },
+  { key:"case",    label:"Case",            desig:"U6" },
+  { key:"cooler",  label:"CPU cooler",      desig:"U7" },
+  { key:"psu",     label:"Power supply",    desig:"U8" },
+];
+
+const state = {};
+
+function fmtUSD(n){ return "$" + n.toLocaleString("en-US"); }
+
+/* ---------- render component slots ---------- */
+function renderSlots(){
+  const wrap = document.getElementById("slots");
+  wrap.innerHTML = "";
+  SLOT_ORDER.forEach(slot => {
+    const options = DATA[slot.key];
+    state[slot.key] = options[0].id;
+
+    const el = document.createElement("div");
+    el.className = "slot";
+    el.innerHTML = `
+      <div class="slot-desig"><span class="cat">${slot.desig}</span><span>${slot.label}</span></div>
+      <select data-slot="${slot.key}" aria-label="${slot.label}">
+        ${options.map(o => `<option value="${o.id}">${o.name}</option>`).join("")}
+      </select>
+      <div class="slot-meta"><span>Price</span><b class="slot-price">${fmtUSD(options[0].price)}</b></div>
+    `;
+    wrap.appendChild(el);
+  });
+
+  wrap.addEventListener("change", (e) => {
+    const sel = e.target.closest("select[data-slot]");
+    if(!sel) return;
+    const key = sel.getAttribute("data-slot");
+    state[key] = sel.value;
+    const item = DATA[key].find(o => o.id === sel.value);
+    sel.closest(".slot").querySelector(".slot-price").textContent = fmtUSD(item.price);
+    recalc();
+  });
+}
+
+function getItem(key){ return DATA[key].find(o => o.id === state[key]); }
+
+/* ---------- calculations ---------- */
+function recalc(){
+  const cpu = getItem("cpu"), mobo = getItem("mobo"), gpu = getItem("gpu"),
+        ram = getItem("ram"), storage = getItem("storage"), pcCase = getItem("case"),
+        cooler = getItem("cooler"), psu = getItem("psu");
+
+  // Power draw: CPU + GPU TDP + ~55W baseline for board/ram/storage/fans
+  const draw = cpu.tdp + gpu.tdp + 55;
+  const recommendedPsu = Math.ceil((draw * 1.3) / 50) * 50; // 30% headroom, rounded to 50W
+
+  // Gaming index: weighted blend, GPU matters more for gaming fps
+  const score = Math.round(gpu.score * 0.65 + cpu.score * 0.35);
+
+  // Bottleneck: compare normalized cpu vs gpu score
+  const diff = cpu.score - gpu.score; // positive => GPU is the limiter, negative => CPU is
+  let bottleneckLabel, bottleneckPct;
+  if(Math.abs(diff) <= 6){
+    bottleneckLabel = "Balanced";
+  } else if(diff > 0){
+    bottleneckLabel = "GPU-bound";
+  } else {
+    bottleneckLabel = "CPU-bound";
+  }
+  bottleneckPct = Math.max(-40, Math.min(40, diff)); // clamp for the needle
+
+  const cost = cpu.price + mobo.price + gpu.price + ram.price + storage.price + pcCase.price + cooler.price + psu.price;
+
+  // ----- compatibility flags -----
+  const flags = [];
+  flags.push({ ok: cpu.socket === mobo.socket, text: `CPU socket ${cpu.socket} ${cpu.socket === mobo.socket ? "matches" : "does not match"} motherboard ${mobo.socket}` });
+  flags.push({ ok: ram.ramType === mobo.ramType, text: `${ram.ramType} memory ${ram.ramType === mobo.ramType ? "matches" : "does not match"} motherboard (${mobo.ramType})` });
+  flags.push({ ok: pcCase.formFactorSupport.includes(mobo.formFactor), text: `${mobo.formFactor} board ${pcCase.formFactorSupport.includes(mobo.formFactor) ? "fits" : "does not fit"} in ${pcCase.name}` });
+  flags.push({ ok: gpu.length <= pcCase.maxGpuLength, text: `GPU length ${gpu.length}mm ${gpu.length <= pcCase.maxGpuLength ? "clears" : "exceeds"} case clearance (${pcCase.maxGpuLength}mm)` });
+  flags.push({ ok: cooler.maxTdp >= cpu.tdp, text: `Cooler rated for ${cooler.maxTdp}W TDP ${cooler.maxTdp >= cpu.tdp ? "covers" : "is below"} CPU's ${cpu.tdp}W` });
+  flags.push({ ok: psu.watts >= recommendedPsu, text: `${psu.watts}W PSU ${psu.watts >= recommendedPsu ? "meets" : "is under"} recommended ${recommendedPsu}W (30% headroom)` });
+
+  paintReadouts({ draw, recommendedPsu, score, bottleneckLabel, bottleneckPct, cost, flags });
+  updateTools({ draw, score, cost });
+}
+
+/* ---------- paint DOM ---------- */
+function paintReadouts({ draw, recommendedPsu, score, bottleneckLabel, bottleneckPct, cost, flags }){
+  // hero
+  document.getElementById("hrWatt").textContent = draw + " W";
+  document.getElementById("hrScore").textContent = score + " / 100";
+  document.getElementById("hrCost").textContent = fmtUSD(cost);
+  document.getElementById("hrBar").style.width = score + "%";
+
+  // summary panel
+  document.getElementById("sumWatt").textContent = draw + " W";
+  document.getElementById("sumPsu").textContent = recommendedPsu + " W+";
+  document.getElementById("sumScore").textContent = score + " / 100";
+  document.getElementById("sumBottleneck").textContent = bottleneckLabel;
+  document.getElementById("sumCost").textContent = fmtUSD(cost);
+
+  // meter: -40..40 diff mapped to 0..100%
+  const pct = ((bottleneckPct + 40) / 80) * 100;
+  document.getElementById("meterNeedle").style.left = pct + "%";
+
+  // compat flags (compact panel)
+  const flagWrap = document.getElementById("compatFlags");
+  flagWrap.innerHTML = flags.map(f =>
+    `<div class="flag ${f.ok ? "ok" : "warn"}">${f.ok ? "✓" : "!"} ${f.text}</div>`
+  ).join("");
+
+  // compat grid (detailed section)
+  const grid = document.getElementById("compatGrid");
+  const titles = ["Socket match","Memory type","Case form factor","GPU clearance","Cooler headroom","PSU wattage"];
+  grid.innerHTML = flags.map((f,i) => `
+    <div class="compat-item">
+      <h4>${titles[i]}</h4>
+      <div class="status ${f.ok ? "ok" : "warn"}">${f.ok ? "PASS" : "CHECK THIS"}</div>
+      <p class="detail">${f.text}.</p>
+    </div>
+  `).join("");
+}
+
+/* ---------- standalone tools ---------- */
+let lastBuild = { draw:0, score:0, cost:0 };
+function updateTools(build){
+  lastBuild = build;
+  document.getElementById("psuInput").placeholder = `e.g. ${build.draw}`;
+  runPsuTool();
+  runFpsTool();
+  runPppTool();
+}
+
+function runPsuTool(){
+  const input = document.getElementById("psuInput");
+  const out = document.getElementById("psuResult");
+  const val = parseFloat(input.value);
+  const draw = isNaN(val) || val <= 0 ? lastBuild.draw : val;
+  if(!draw){ out.textContent = "Enter a draw value, or build above."; return; }
+  const rec = Math.ceil((draw * 1.3) / 50) * 50;
+  out.textContent = `${rec} W recommended (${draw} W draw × 1.3 headroom)`;
+}
+
+function runFpsTool(){
+  const out = document.getElementById("fpsResult");
+  const res = document.getElementById("resSelect").value;
+  if(!lastBuild.score){ out.textContent = "Configure a build first"; return; }
+  // Rough relative multiplier by resolution tier — original heuristic, not measured data.
+  const mult = { "1080": 1.0, "1440": 0.72, "2160": 0.42 }[res];
+  const relative = Math.round(lastBuild.score * mult);
+  let tier = "entry";
+  if(relative > 75) tier = "high-refresh";
+  else if(relative > 50) tier = "smooth 60fps+";
+  else if(relative > 30) tier = "playable";
+  out.textContent = `Relative headroom: ${relative}/100 — ${tier} territory at ${res === "2160" ? "4K" : res + "p"}`;
+}
+
+function runPppTool(){
+  const out = document.getElementById("pppResult");
+  if(!lastBuild.score){ out.textContent = "Configure a build first"; return; }
+  const ppp = (lastBuild.cost / lastBuild.score).toFixed(2);
+  out.textContent = `${fmtUSD(lastBuild.cost)} ÷ ${lastBuild.score} index = $${ppp} per index point`;
+}
+
+document.getElementById("psuInput").addEventListener("input", runPsuTool);
+document.getElementById("resSelect").addEventListener("change", runFpsTool);
+
+/* ---------- nav toggle ---------- */
+const navToggle = document.getElementById("navToggle");
+const mainNav = document.getElementById("main-nav");
+navToggle.addEventListener("click", () => {
+  const open = mainNav.classList.toggle("open");
+  navToggle.setAttribute("aria-expanded", String(open));
+});
+mainNav.querySelectorAll("a").forEach(a => a.addEventListener("click", () => {
+  mainNav.classList.remove("open");
+  navToggle.setAttribute("aria-expanded", "false");
+}));
+
+/* ---------- scroll to top ---------- */
+document.getElementById("scrollTop").addEventListener("click", () => {
+  window.scrollTo({ top:0, behavior:"smooth" });
+});
+
+/* ---------- contact form -> mailto ---------- */
+document.getElementById("contactForm").addEventListener("submit", (e) => {
+  e.preventDefault();
+  const name = document.getElementById("cfName").value.trim();
+  const email = document.getElementById("cfEmail").value.trim();
+  const subject = document.getElementById("cfSubject").value.trim();
+  const message = document.getElementById("cfMessage").value.trim();
+
+  const body = `From: ${name} (${email})\n\n${message}`;
+  const mailto = `mailto:fasihu808@gmail.com?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+  window.location.href = mailto;
+
+  const note = document.getElementById("cfNote");
+  note.textContent = "Opening your email client…";
+});
+
+/* ---------- init ---------- */
+renderSlots();
+recalc();
